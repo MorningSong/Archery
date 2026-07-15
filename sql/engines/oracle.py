@@ -16,7 +16,7 @@ from sql.utils.sql_utils import (
     get_exec_sqlitem_list,
 )
 from . import EngineBase
-import cx_Oracle
+import oracledb
 from .models import ResultSet, ReviewSet, ReviewResult
 from sql.utils.data_masking import simple_column_mask
 
@@ -36,17 +36,11 @@ class OracleEngine(EngineBase):
         if self.conn:
             return self.conn
         if self.sid:
-            dsn = cx_Oracle.makedsn(self.host, self.port, self.sid)
-            self.conn = cx_Oracle.connect(
-                self.user, self.password, dsn=dsn, encoding="UTF-8", nencoding="UTF-8"
-            )
+            dsn = oracledb.makedsn(self.host, self.port, self.sid)
+            self.conn = oracledb.connect(self.user, self.password, dsn=dsn)
         elif self.service_name:
-            dsn = cx_Oracle.makedsn(
-                self.host, self.port, service_name=self.service_name
-            )
-            self.conn = cx_Oracle.connect(
-                self.user, self.password, dsn=dsn, encoding="UTF-8", nencoding="UTF-8"
-            )
+            dsn = oracledb.makedsn(self.host, self.port, service_name=self.service_name)
+            self.conn = oracledb.connect(self.user, self.password, dsn=dsn)
         else:
             raise ValueError("sid 和 dsn 均未填写, 请联系管理页补充该实例配置.")
         return self.conn
@@ -701,9 +695,9 @@ class OracleEngine(EngineBase):
                 sql = f"select PLAN_TABLE_OUTPUT from table(dbms_xplan.display)"
             cursor.execute(sql, parameters or [])
             fields = cursor.description
-            if any(x[1] == cx_Oracle.CLOB for x in fields):
+            if any(x[1] == oracledb.DB_TYPE_CLOB for x in fields):
                 rows = [
-                    tuple([(c.read() if type(c) == cx_Oracle.LOB else c) for c in r])
+                    tuple([(c.read() if type(c) == oracledb.LOB else c) for c in r])
                     for r in cursor
                 ]
                 if int(limit_num) > 0:
@@ -1436,9 +1430,9 @@ class OracleEngine(EngineBase):
             )
             cursor.execute(get_task_sql, {"task_name": task_name})
             fields = cursor.description
-            if any(x[1] == cx_Oracle.CLOB for x in fields):
+            if any(x[1] == oracledb.DB_TYPE_CLOB for x in fields):
                 rows = [
-                    tuple([(c.read() if type(c) == cx_Oracle.LOB else c) for c in r])
+                    tuple([(c.read() if type(c) == oracledb.LOB else c) for c in r])
                     for r in cursor
                 ]
             else:
